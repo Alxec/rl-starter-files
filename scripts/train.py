@@ -4,11 +4,15 @@ import datetime
 import torch_ac
 import tensorboardX
 import sys
+import os
+import shutil
 
 import utils
 from utils import device
 from model import ACModel
 
+# Add an environment variable for storage
+os.environ['RL_STORAGE'] = '/network/scratch/a/aleksei.efremov/'
 
 # Parse arguments
 
@@ -19,6 +23,8 @@ parser.add_argument("--algo", required=True,
                     help="algorithm to use: a2c | ppo (REQUIRED)")
 parser.add_argument("--env", required=True,
                     help="name of the environment to train on (REQUIRED)")
+parser.add_argument("--wrapper", default=None,
+                    help="name of the environment wrapper")
 parser.add_argument("--model", default=None,
                     help="name of the model (default: {ENV}_{ALGO}_{TIME})")
 parser.add_argument("--seed", type=int, default=1,
@@ -75,6 +81,9 @@ if __name__ == "__main__":
     model_name = args.model or default_model_name
     model_dir = utils.get_model_dir(model_name)
 
+    if os.path.exists(os.path.join('storage', model_name)):
+        shutil.move(os.path.join('storage', model_name), model_dir)
+
     # Load loggers and Tensorboard writer
 
     txt_logger = utils.get_txt_logger(model_dir)
@@ -98,7 +107,7 @@ if __name__ == "__main__":
 
     envs = []
     for i in range(args.procs):
-        envs.append(utils.make_env(args.env, args.seed + 10000 * i))
+        envs.append(utils.make_env(args.env, args.seed + 10000 * i, args.wrapper))
     txt_logger.info("Environments loaded\n")
 
     # Load training status
@@ -201,3 +210,5 @@ if __name__ == "__main__":
                 status["vocab"] = preprocess_obss.vocab.vocab
             utils.save_status(status, model_dir)
             txt_logger.info("Status saved")
+    
+    shutil.move(model_dir, os.path.join('storage', model_name))
