@@ -95,3 +95,5 @@ python3 -m  scripts.train --algo ppo --env MiniGrid-FakeLava-5x5-3x4-neg024-v0 -
 
 # python3 -m  scripts.train --algo ppo --env MiniGrid-FakeLava-Target-5x5-4x4-v0 --model 01_02_23d_Lava_target_4x4_PO --seed 5 --save-interval 12 --discount 0.98 --frames 49152
 # python3 -m  scripts.train --algo ppo --env MiniGrid-FakeLava-5x5-4x4-v0 --model 01_02_23d_Lava_target_4x4_PO --seed 5 --save-interval 12 --discount 0.98 --lr 0.0007 --frames 1000000
+
+python3 -m  scripts.visualize --env MiniGrid-FakeLava-5x5-4x4-v0 --model 01_02_23_Lava_target_4x4_PO_long

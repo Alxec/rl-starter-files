@@ -12,6 +12,8 @@ parser.add_argument("--env", required=True,
                     help="name of the environment to be run (REQUIRED)")
 parser.add_argument("--model", required=True,
                     help="name of the trained model (REQUIRED)")
+parser.add_argument("--wrapper", default=None,
+                    help="name of the environment wrapper")
 parser.add_argument("--seed", type=int, default=0,
                     help="random seed (default: 0)")
 parser.add_argument("--shift", type=int, default=0,
@@ -41,7 +43,7 @@ print(f"Device: {device}\n")
 
 # Load environment
 
-env = utils.make_env(args.env, args.seed, render_mode="human")
+env = utils.make_env(args.env, args.seed, args.wrapper, render_mode="human")
 for _ in range(args.shift):
     env.reset()
 print("Environment loaded\n")
