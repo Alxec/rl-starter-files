@@ -19,6 +19,21 @@ def get_obss_preprocessor(obs_space):
                 "image": preprocess_images(obss, device=device)
             })
 
+    # Check if it is a MiniGrid observation space with place cells observations
+    elif isinstance(obs_space, gym.spaces.Dict) and "place cells" in obs_space.spaces.keys():
+        obs_space = {"place cells": obs_space.spaces["place cells"].shape[0], "text": 100}
+
+        vocab = Vocabulary(obs_space["text"])
+
+        def preprocess_obss(obss, device=None):
+            return torch_ac.DictList({
+                "pc": preprocess_images([obs["place cells"] for obs in obss], device=device).squeeze(),
+                "direction": preprocess_int([obs["direction"] for obs in obss], device=device),
+                "text": preprocess_texts([obs["mission"] for obs in obss], vocab, device=device)
+            })
+
+        preprocess_obss.vocab = vocab
+
     # Check if it is a MiniGrid observation space
     elif isinstance(obs_space, gym.spaces.Dict) and "image" in obs_space.spaces.keys():
         obs_space = {"image": obs_space.spaces["image"].shape, "text": 100}
@@ -44,6 +59,10 @@ def preprocess_images(images, device=None):
     images = numpy.array(images)
     return torch.tensor(images, device=device, dtype=torch.float)
 
+def preprocess_int(integer, device=None):
+    # Bug of Pytorch: very slow if not first converted to numpy array
+    integer = numpy.array(integer)
+    return torch.tensor(integer, device=device, dtype=torch.uint8)
 
 def preprocess_texts(texts, vocab, device=None):
     var_indexed_texts = []

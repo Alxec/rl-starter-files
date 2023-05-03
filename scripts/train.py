@@ -9,7 +9,8 @@ import shutil
 
 import utils
 from utils import device
-from model import ACModel
+from model import ACModel, ACModel_noCV
+from minigrid.wrappers import PlaceCellsObsWrapper
 
 # Add an environment variable for storage
 os.environ['RL_STORAGE'] = '/network/scratch/a/aleksei.efremov/'
@@ -25,6 +26,12 @@ parser.add_argument("--env", required=True,
                     help="name of the environment to train on (REQUIRED)")
 parser.add_argument("--wrapper", default=None,
                     help="name of the environment wrapper")
+parser.add_argument("--pc", default=False,
+                    help="use place cells representations")
+parser.add_argument("--pc-size", type=int, default=300,
+                    help="number of place cells")
+parser.add_argument("--sd", type=int, default=3,
+                    help="SD of place fields")
 parser.add_argument("--model", default=None,
                     help="name of the model (default: {ENV}_{ALGO}_{TIME})")
 parser.add_argument("--seed", type=int, default=1,
@@ -103,11 +110,25 @@ if __name__ == "__main__":
 
     txt_logger.info(f"Device: {device}\n")
 
+    # Generate place cells representations
+
+    if args.pc:
+        env = utils.make_env(args.env, args.seed, args.wrapper)
+        fake_pc = utils.FakePlaceCells(env, args.pc_size, args.sd, args.seed)
+
     # Load environments
 
     envs = []
-    for i in range(args.procs):
-        envs.append(utils.make_env(args.env, args.seed + 10000 * i, args.wrapper))
+    if args.pc:
+        for i in range(args.procs):
+            envs.append(PlaceCellsObsWrapper(
+                            utils.make_env(args.env, args.seed + 10000 * i, args.wrapper),
+                            args.pc_size,
+                            fake_pc.activation
+                            ))
+    else:
+        for i in range(args.procs):
+            envs.append(utils.make_env(args.env, args.seed + 10000 * i, args.wrapper))
     txt_logger.info("Environments loaded\n")
 
     # Load training status
@@ -126,10 +147,13 @@ if __name__ == "__main__":
     txt_logger.info("Observations preprocessor loaded")
 
     # Load model
-
-    acmodel = ACModel(obs_space, envs[0].action_space, args.mem, args.text)
+    if args.pc:
+        acmodel = ACModel_noCV(obs_space, envs[0].action_space, args.mem, args.text)
+    else:
+        acmodel = ACModel(obs_space, envs[0].action_space, args.mem, args.text)
     if "model_state" in status:
         acmodel.load_state_dict(status["model_state"])
+        txt_logger.info("Existing model found")
     acmodel.to(device)
     txt_logger.info("Model loaded\n")
     txt_logger.info("{}\n".format(acmodel))
